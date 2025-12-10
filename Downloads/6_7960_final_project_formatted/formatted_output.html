@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="Sandra Luo" />
+  <title>Understanding Adversarial Attacks in Feature Space</title>
+  <meta property="og:title" content="Understanding Adversarial Attacks in Feature Space" />
+
+  <!-- jQuery (from your template, not strictly needed but harmless) -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+
+  <!-- MathJax for LaTeX equations -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" type="text/javascript"></script>
+
+  <!-- Optional favicon (keep or remove) -->
+  <link rel="shortcut icon" href="images/icon.ico">
+
+  <!-- Pandoc base styles (for code, smallcaps, etc.) -->
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+  </style>
+
+  <!-- Your template styling -->
+  <style type="text/css">
+    body {
+      background-color: #f5f9ff;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Hide both math displays initially, will display based on JS detection */
+    .mathjax-mobile, .mathml-non-mobile { display: none; }
+
+    /* Show the MathML content by default on non-mobile devices */
+    .show-mathml .mathml-non-mobile { display: block; }
+    .show-mathjax .mathjax-mobile { display: block; }
+
+    .content-margin-container {
+      display: flex;
+      width: 100%;
+      justify-content: left;
+      align-items: flex-start;
+      box-sizing: border-box;
+    }
+
+    .main-content-block {
+      width: 70%;
+      max-width: 1100px;
+      background-color: #fff;
+      border-left: 1px solid #DDD;
+      border-right: 1px solid #DDD;
+      padding: 16px 24px 24px 24px;
+      margin: 12px 0;
+      font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+      box-sizing: border-box;
+    }
+
+    .margin-left-block {
+      font-size: 14px;
+      width: 15%;
+      max-width: 130px;
+      position: relative;
+      margin-left: 10px;
+      text-align: left;
+      font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+      padding: 5px;
+      box-sizing: border-box;
+    }
+
+    .margin-right-block {
+      font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+      font-size: 14px;
+      width: 25%;
+      max-width: 256px;
+      position: relative;
+      text-align: left;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 1rem auto;
+    }
+
+    .my-video {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: auto;
+    }
+
+    /* Hide both video displays initially, will display based on JS detection */
+    .vid-mobile, .vid-non-mobile { display: none; }
+
+    /* Show the video content by default on non-mobile devices */
+    .show-vid-mobile .vid-mobile { display: block; }
+    .show-vid-non-mobile .vid-non-mobile { display: block; }
+
+    a:link, a:visited {
+      color: #0e7862;
+      text-decoration: none;
+    }
+    a:hover {
+      color: #24b597;
+    }
+
+    h1 {
+      font-size: 22px;
+      margin-top: 24px;
+      margin-bottom: 14px;
+    }
+
+    h2 {
+      font-size: 19px;
+      margin-top: 20px;
+      margin-bottom: 10px;
+    }
+
+    h3 {
+      font-size: 17px;
+      margin-top: 18px;
+      margin-bottom: 8px;
+    }
+
+    table.header {
+      font-weight: 300;
+      font-size: 17px;
+      flex-grow: 1;
+      width: 70%;
+      max-width: calc(100% - 290px);
+    }
+    table td, table td * {
+      vertical-align: middle;
+      position: relative;
+    }
+    table.paper-code-tab {
+      flex-shrink: 0;
+      margin-left: 8px;
+      margin-top: 8px;
+      padding: 0px 0px 0px 8px;
+      width: 290px;
+      height: 150px;
+    }
+
+    .layered-paper {
+      box-shadow:
+        0px 0px 1px 1px rgba(0,0,0,0.35),
+        5px 5px 0 0px #fff,
+        5px 5px 1px 1px rgba(0,0,0,0.35),
+        10px 10px 0 0px #fff,
+        10px 10px 1px 1px rgba(0,0,0,0.35);
+      margin-top: 5px;
+      margin-left: 10px;
+      margin-right: 30px;
+      margin-bottom: 5px;
+    }
+
+    hr {
+      height: 1px;
+      border: none;
+      background-color: #DDD;
+    }
+
+    div.hypothesis {
+      width: 80%;
+      background-color: #EEE;
+      border: 1px solid black;
+      border-radius: 10px;
+      font-family: Courier;
+      font-size: 18px;
+      text-align: center;
+      margin: auto;
+      padding: 16px;
+    }
+
+    div.citation {
+      font-size: 0.8em;
+      background-color:#fff;
+      padding: 10px;
+      height: auto;
+    }
+
+    .fade-in-inline {
+      position: absolute;
+      text-align: center;
+      margin: auto;
+      -webkit-mask-image: linear-gradient(to right,
+                                          transparent 0%,
+                                          transparent 40%,
+                                          black 50%,
+                                          black 90%,
+                                          transparent 100%);
+      mask-image: linear-gradient(to right,
+                                  transparent 0%,
+                                  transparent 40%,
+                                  black 50%,
+                                  black 90%,
+                                  transparent 100%);
+      -webkit-mask-size: 8000% 100%;
+      mask-size: 8000% 100%;
+      animation-name: sweepMask;
+      animation-duration: 4s;
+      animation-iteration-count: infinite;
+      animation-timing-function: linear;
+      animation-delay: -1s;
+    }
+
+    .fade-in2-inline {
+      animation-delay: 1s;
+    }
+
+    .inline-div {
+      position: relative;
+      display: inline-block;
+      vertical-align: top;
+      width: 50px;
+    }
+
+    /* Pandoc references styling */
+    .references {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid #ddd;
+    }
+  </style>
+
+</head>
+
+<body>
+
+  <!-- HEADER STRIP -->
+  <div class="content-margin-container">
+    <div class="margin-left-block">
+    </div>
+    <div class="main-content-block">
+      <table class="header" align="left">
+        <tr>
+          <td colspan="4">
+            <span style="font-size: 32px; font-family: 'Courier New', Courier, monospace;">
+              Understanding Adversarial Attacks in Feature Space
+            </span>
+          </td>
+        </tr>
+        <tr>
+          <td align="left">
+            <span style="font-size:17px">Sandra Luo</span>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="4" align="left">
+            <span style="font-size:18px">Final project for 6.7960, MIT</span>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <div class="margin-right-block">
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT + OUTLINE SIDEBAR -->
+  <div class="content-margin-container">
+    <!-- Left margin: outline -->
+    <div class="margin-left-block">
+      <div style="position:fixed; max-width:inherit; top:max(20%,120px)">
+        <b style="font-size:16px">Outline</b><br><br>
+        <a href="#summary">Summary</a><br><br>
+        <a href="#introduction">Introduction</a><br><br>
+        <a href="#background">Background</a><br><br>
+        <a href="#experiment">Experiment</a><br><br>
+        <a href="#results">Results</a><br><br>
+        <a href="#semantic-feature-hunt">Semantic Feature Hunt</a><br><br>
+        <a href="#analysis">Analysis</a><br><br>
+        <a href="#conclusion">Conclusion</a><br><br>
+        <a href="#appendix">Appendix</a><br><br>
+        <a href="#refs">References</a><br><br>
+      </div>
+    </div>
+
+    <!-- Main article body: your Pandoc content -->
+    <div class="main-content-block">
+
+      <h1 id="summary">Summary</h1>
+      <p>We study how adversarial attacks propagate through a neural network and alter its feature activations using sparse autoencoders. <a href="https://github.com/sandraluo22/deep-learning-final-proj">[Code here]</a></p>
+
+      <h1 id="introduction">Introduction</h1>
+      <p>Adversarial examples expose a persistent vulnerability in modern neural networks: small input perturbations can induce confident misclassifications despite being imperceptible to humans. While much prior work studies these attacks at the input or output level, much less is known about how adversarial perturbations propagate through the network’s internal representation space, and how they interact with the latent features the model relies on.</p>
+      <p>Recent progress in feature-level interpretability, especially through sparse autoencoders (SAEs), has made it possible to examine internal representations in terms of human-interpretable feature directions. At the same time, theoretical work such as <span class="citation" data-cites="stevinson2025adversarialsuperposition">(Stevinson et al. 2025)</span> suggests that adversarial vulnerability may be caused by superposition, the phenomenon where multiple concepts share overlapping subspaces, leading to interference between non-orthogonal features <span class="citation" data-cites="elhage2022superposition">(Elhage et al. 2022)</span>. However, these analyses have been studied mainly in simplified or artificially constrained settings, leaving it uncertain whether similar mechanisms emerge in naturally trained networks.</p>
+      <p>In this blog, we explore how adversarial perturbations alter a model’s feature activations and whether their effects align with superposed directions discovered by sparse autoencoders. By analyzing linear and nonlinear manifold geometry, drift patterns, and the behavior of specific feature groups under attack, we hope to characterize the pathways through which adversarial perturbations influence internal representations. This offers insight into whether interpretability tools can reveal structural reasons for adversarial vulnerability.</p>
+      <p>To make this concrete, we investigate the following questions:</p>
+      <ul>
+        <li><p>Do adversarial attacks exploit superposed feature directions uncovered by sparse autoencoders?</p></li>
+        <li><p>How do adversarial perturbations manifest in/propagate through the feature space?</p></li>
+      </ul>
+
+      <h1 id="background">Background</h1>
+      <p>A prominent theme in adversarial robustness is the geometric interpretation of adversarial perturbations. Many analyses frame adversarial examples as small input displacements that cross nearby decision boundaries in high-dimensional spaces, such as using codimension and manifold geometry or non-robust features to explain why small perturbations can induce large semantic errors <span class="citation" data-cites="khoury2018geometryadversarialexamples">(Khoury and Hadfield-Menell 2018)</span>, <span class="citation" data-cites="ilyas2019adversarialexamplesbugsfeatures">(Ilyas et al. 2019)</span>.</p>
+      <p>Recent work has examined how adversarial perturbations interact with the internal structure of learned representations. <span class="citation" data-cites="stevinson2025adversarialsuperposition">(Stevinson et al. 2025)</span> propose that adversarial vulnerability may arise from superposition. Their theoretical analysis shows that when a model must represent more features than available dimensions—such as under an artificial bottleneck—interference between these directions creates fragile decision boundaries, and optimal adversarial perturbations tend to align with these interference directions. They validate this mechanism using toy models and bottlenecked Vision Transformers on CIFAR-10.</p>
+      <p>Sparse autoencoders (SAEs) can also help with understanding the structure of internal representations. Prior work <span class="citation" data-cites="cunningham2023sparseautoencodershighlyinterpretable">(Cunningham et al. 2023)</span> demonstrates that SAEs can disentangle latent directions and expose feature-level structure, often revealing the presence of superposition in large neural networks. Because SAEs explicitly aim to recover meaningful or approximately disentangled directions from hidden activations, they are well suited for examining how perturbations affect specific latent features.</p>
+      <p>To understand the activation space’s representation geometry, we use tools such as PCA, UMAP, and drift-based feature analyses. PCA captures linear variance directions in activation space, UMAP reveals nonlinear topological structure, and feature-wise drift matrices highlight how individual features change under perturbation. We use these complementary techniques to analyze the propagation and structure of adversarial effects in latent space in a more comprehensive manner.</p>
+      <p>We now briefly review the machine learning techniques relevant to our analysis.</p>
+
+      <h2 id="projected-gradient-descent">Projected Gradient Descent</h2>
+      <p>Projected gradient descent, or PGD, is an adversarial attack that aims to modify a given input image at a near-imperceptible level, but enough to make the model misclassify it. The idea is to optimize small perturbations <span class="math inline">\(\delta\)</span> at the pixel level by maximizing the model’s loss function</p>
+      <p><span class="math display">\[\max_{\|\delta\| \le \varepsilon} \mathbb{E}_{(x, y) \in D}[L(\theta,x+\delta,y)]\]</span></p>
+      <p>This is done iteratively:</p>
+      <p><span class="math display">\[\delta_{t+1} = \Pi_{\|\delta\| \le \varepsilon} \left( \delta_t + \alpha \text{ sign} \left( \nabla_x L(\theta,x+\delta,y) \right) \right)\]</span></p>
+      <p>with hyperparameters <span class="math inline">\(\alpha\)</span> and <span class="math inline">\(\varepsilon\)</span>.</p>
+      <p>PGD is considered to be one of the strongest first-order adversaries <span class="citation" data-cites="madry2018towards">(Madry et al. 2018)</span> and serves as the foundation for many subsequent adversarial attack methods, including variants inspired by Carlini and Wagner <span class="citation" data-cites="carlini2017towards">(Carlini and Wagner 2017)</span> and many robustness studies <span class="citation" data-cites="raghunathan2018certified athalye2018obfuscated tramer2018ensemble">(Raghunathan, Steinhardt, and Liang 2018; Athalye, Carlini, and Wagner 2018; Tramèr et al. 2018)</span>. It is also the default attack in much of the adversarial robustness literature because it is reliable, simple, and closely approximates the worst-case <span class="math inline">\(\ell_p\)</span> perturbation.</p>
+      <p>PGD performs best in settings with differentiable input space, bounded Lipschitz behavior, and continuous-valued features, where gradient-based optimization can reliably ascend the loss landscape.</p>
+
+      <h2 id="sparse-autoencoders">Sparse autoencoders</h2>
+      <p>Sparse autoencoders (SAEs) have recently become a very popular tool for interpreting the internal representations of neural networks. Unlike classical autoencoders, which compress activations into dense latent vectors, SAEs expand the latent space to have many times more dimensions than the original activation, and enforce a sparsity penalty so that only a few of those dimensions activate for a given input. The encoder of the SAE computes the sparse code</p>
+      <p><span class="math display">\[z = \text{ReLU}(Wh+b)\]</span></p>
+      <p>and the decoder aims to reconstruct the original activation <span class="math inline">\(h\)</span> from the sparse code:</p>
+      <p><span class="math display">\[\hat{h}=W^Tz\]</span></p>
+      <p>The weights of the decoder and encoder are often tied for more disentangled features.</p>
+      <p>SAEs were introduced in the context of mechanistic interpretability by <span class="citation" data-cites="cunningham2023sparseautoencodershighlyinterpretable">(Cunningham et al. 2023)</span>, and further developed by subsequent work for their ability to extract meaningful semantic features from large models.</p>
+      <p>Sparse autoencoders are particularly effective at exposing superposition: because each latent feature corresponds to a direction in the model’s representation space, they can reveal how concepts mix or interfere through their activations.</p>
+
+      <h1 id="experiment">Experiment</h1>
+
+      <h2 id="overview">Overview</h2>
+      <p>We opted to investigate PGD on <strong>vision</strong> models for the following reasons:</p>
+      <ul>
+        <li><p>Vulnerability: Vision models are more vulnerable to imperceptible, pixel-level perturbations due to smooth and high-dimensional input spaces.</p></li>
+        <li><p>Continuity: Images satisfy PGD’s constraints well, unlike discrete domains such as text.</p></li>
+        <li><p>Interpretability: Adversarial attacks on inputs are easy to visualize in the vision space, allowing for better intuitive understanding of perturbations and its results on the activation space.</p></li>
+      </ul>
+      <p>To understand how adversarial attacks act in the feature space, we ran two experiments:</p>
+      <ol>
+        <li><p>perturb on <span class="math inline">\(x\)</span> <span class="math inline">\(\rightarrow\)</span> impact on <span class="math inline">\(h=h(x_{adv})\)</span></p></li>
+        <li><p>perturb on <span class="math inline">\(h\)</span> <span class="math inline">\(\rightarrow\)</span> resulting <span class="math inline">\(h_{adv}\)</span></p></li>
+      </ol>
+
+      <h2 id="setup">Setup</h2>
+
+      <h3 id="base-model-and-dataset">Base Model and Dataset</h3>
+      <p>We employed OpenAI’s pretrained CLIP-ViT-B-32 vision encoder and added a linear classification head to classify images from CIFAR-10.</p>
+      <p>The main reason we used CLIP-ViT-B-32 was because it had a pre-trained sparse autoencoder on HuggingFace (cannot train our own due to GPU limitations). We could not find a corresponding sparse autoencoder for larger models such as CLIP-ViT-B-16.</p>
+      <p>To most directly study PGD attacks and compare our results in a cleaner way with <span class="citation" data-cites="stevinson2025adversarialsuperposition">(Stevinson et al. 2025)</span>, we used the supervised task of classifying CIFAR-10 for its well-defined training objective.</p>
+      <p>The classification head was trained on CLIP embeddings with the following hyperparameters:</p>
+      <ul>
+        <li><p>Optimizer: Adam, 1e-3 learning rate</p></li>
+        <li><p>Loss function: Cross Entropy Loss</p></li>
+        <li><p>Epochs: 10</p></li>
+      </ul>
+      <p>Other than normalization transforms for CIFAR-10, no other augmentations were applied to the dataset.</p>
+
+      <h3 id="pgd">PGD</h3>
+      <p>Our initial PGD attack employed the following parameters for both objectives (a) and (b):</p>
+      <ul>
+        <li><p>Loss function: Cross Entropy Loss during classification</p></li>
+        <li><p><span class="math inline">\(\varepsilon = 0.1\)</span></p></li>
+        <li><p><span class="math inline">\(\alpha =\)</span> 1e-2</p></li>
+        <li><p>Steps = 40</p></li>
+      </ul>
+      <p>These hyperparameters proved quite effective for perturbing the input, increasing the loss magnitude by an average of <span class="math inline">\(29.8\)</span>, but did not have a significant effect on the loss when perturbing <span class="math inline">\(h\)</span>.</p>
+      <p>Our initial hypothesis was that gradients in the activation space would spike or go off-manifold if not restricted enough, but our experiments showed the opposite—both the average normed difference between <span class="math inline">\(h\)</span> and <span class="math inline">\(h_{adv}\)</span> over all patches, as well as the average loss difference, was much larger when we perturbed the input rather than the hidden activation.</p>
+      <p>To improve the effectiveness of PGD wrt. <span class="math inline">\(h\)</span>, we modified <span class="math inline">\(\alpha\)</span> and <span class="math inline">\(\varepsilon\)</span> to scale with the magnitude of the activation space:</p>
+      <p><span class="math display">\[\alpha_{h}=\alpha \cdot \|h\|_{\text{RMS}}\]</span> <span class="math display">\[\varepsilon = \varepsilon \cdot \|h\|_{\text{RMS}}\]</span></p>
+      <p>where <span class="math inline">\(h \in \mathbb{R}^{50 \times 768}\)</span> (the number of tokens + CLS token<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a> <span class="math inline">\(\times\)</span> dimension of the hidden space).</p>
+      <p>The new hyperparameters were able to improve the magnitude of the loss function by an average of <span class="math inline">\(7.4\)</span> when perturbing wrt. <span class="math inline">\(h_{adv}\)</span>, which is relatively low but high enough for the model to misclassify.</p>
+
+      <h3 id="sparse-autoencoder">Sparse autoencoder</h3>
+      <p>We used <a href="https://huggingface.co/Prisma-Multimodal/sparse-autoencoder-clip-b-32-sae-vanilla-x64-layer-11-hook_resid_post-l1-1e-05/tree/main">Prisma Multimodal</a>’s pre-trained sparse autoencoder trained on the residual layer of the 11th transformer block, with the following architecture:</p>
+      <ul>
+        <li><p>Input Dimension: 768</p></li>
+        <li><p>SAE Dimension: 49,152 (x64 expansion factor)</p></li>
+        <li><p>Sparsity: 1,408</p></li>
+        <li><p>Activation Function: ReLU</p></li>
+        <li><p>Context Size: 50 tokens (CLS included)</p></li>
+      </ul>
+      <p>No additional fine-tuning was done.</p>
+      <p>For each hidden vector, we apply a layer norm function before feeding into the sparse autoencoder.</p>
+
+      <h1 id="results">Results</h1>
+      <p>For all 5000 images in the CIFAR-10 dataset, we:</p>
+      <ul>
+        <li><p>Extracted the clean activations <span class="math inline">\(\mathbf{h}\)</span> from the output of the residual block in layer 11.</p></li>
+        <li><p>Computed sparse autoencoder features using the normalized activations, <span class="math inline">\(\mathbf{\phi(\textbf{layer norm}(h))}\)</span>.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></p></li>
+        <li><p>Ran PGD wrt. <span class="math inline">\(h\)</span> and extracted the perturbed activations <span class="math inline">\(\mathbf{h_{adv}}\)</span>.</p></li>
+        <li><p>Computed sparse autoencoder features of perturbed activations <span class="math inline">\(\mathbf{\phi(\textbf{layer norm}(h_{adv}))}\)</span>.</p></li>
+        <li><p>Ran PGD wrt. the input <span class="math inline">\(x\)</span> and extracted activations of the perturbed input <span class="math inline">\(\mathbf{h(x_{adv})}\)</span>.</p></li>
+        <li><p>Computed sparse autoencoders features of perturbed input activations <span class="math inline">\(\mathbf{\phi(\textbf{layer norm}((h(x_{adv}))}\)</span>.</p></li>
+      </ul>
+      <p>For each type of activation <span class="math inline">\(\{h, h_{adv}, h(x_{adv})\}\)</span> and CIFAR-10 class, we tracked the firing count of the 49,152 features for the following thresholds: <span class="math inline">\(\{1.0, 1.5, 2.0, 2.5, 3.0\}\)</span>.</p>
+      <p>We examine the behavior of the feature activations in the following section.</p>
+
+      <h1 id="semantic-feature-hunt">Semantic Feature Hunt</h1>
+      <p>Ideally, the features that we evaluate in the activation space against perturbations should be semantically meaningful.</p>
+      <p>We first looked at the top-<span class="math inline">\(k\)</span> most active features at high thresholds, but our analysis showed that these features exhibit strong, ubiquitous activation across all classes, offering little semantic value. We therefore revised our criteria to better uncover semantic features.<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></p>
+      <p>Intuitively, semantic features should:</p>
+      <ol>
+        <li><p>Fire with <strong>decently high magnitude</strong> and <strong>relatively frequently</strong> over all tokens, but also be</p></li>
+        <li><p>Somewhat <strong>unique to each class</strong>, as this is how the classifier categorizes CIFAR-10. Features that fire all the time provide no useful information for the model to make a classification decision.</p></li>
+      </ol>
+      <p>We set this as our two assumptions for identification. Our data collection process already takes (a) into consideration, so our objective in this section is to eliminate distractor features that always fire for every class.</p>
+      <p>We first compute firing counts for each feature over sliding windows of thresholds (from the <span class="math inline">\(k\)</span>-th to the <span class="math inline">\(k+50\)</span>-th), evaluated locally within each class to increase the chance of capturing class-specific patterns. We then aggregate and deduplicate these results to assess the overall uniqueness of each feature.</p>
+      <figure>
+        <img src="./media/e97fae722506c909574a485fae3a2b89a8f6bfe2.png" id="fig:placeholder" alt="Firing counts for different thresholds over rank windows #1-#1500." />
+        <figcaption>Firing counts for different thresholds over rank windows of length 50 from #1-#1500 (chosen as the sparsity of the graph is around 1408).</figcaption>
+      </figure>
+      <p>Averaging the following proportion</p>
+      <p><span class="math display">\[\frac{\text{\# unique features}}{\text{baseline feature count}}\]</span></p>
+      <p>over all thresholds (excluding the <span class="math inline">\(3.0\)</span> threshold, which seems to contain mainly noise features), we find that the overall highest proportion of unique features lie in the <span class="math inline">\(100\)</span>-th to <span class="math inline">\(200\)</span>-th most common feature range. The following figure shows the distribution within this range:</p>
+      <figure>
+        <img src="./media/84e0425ef40cf7c8a58559d9238fc633e6127056.png" id="fig:placeholder2" alt="Firing counts for rank windows #100-#200." />
+        <figcaption>Firing counts for different thresholds over rank windows of length 10 from #100-#200.</figcaption>
+      </figure>
+      <p>We find that there are three ranges in this chart where the uniqueness meets the baseline<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a>: <span class="math display">\[\{(110, 115), (165, 170), (185, 190)\}\]</span></p>
+      <p>We collect all feature indices within this range and perform the following calculations to isolate semantic features based on uniqueness:</p>
+      <ul>
+        <li><p>Denote the feature count of a given feature <span class="math inline">\(f\)</span> for class <span class="math inline">\(i\)</span> as <span class="math inline">\(f_i\)</span>. For each feature and thresholds <span class="math inline">\(\{1.5, 2.0, 2.5 \}\)</span><a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a> , we calculate a distance matrix <span class="math inline">\(L \in \mathbb{R}^{10 \times 10}\)</span> where, <span class="math inline">\(L_{ij}\)</span> is <span class="math inline">\(\|f_i-f_j\|\)</span>.</p></li>
+        <li><p>For each matrix <span class="math inline">\(L\)</span>, calculate a thresholded density ratio</p>
+          <p><span class="math display">\[d=\frac{1}{|L|} \sum_{i,j} \left( |L_{ij}| &lt; \tau \right)\]</span></p>
+          <p>for <span class="math inline">\(\tau = \tau_{\text{scale}} \cdot \max(|A|)\)</span> where <span class="math inline">\(\tau_{\text{scale}}\)</span> is a hyperparameter set to <span class="math inline">\(0.3\)</span>.</p></li>
+        <li><p>Since sparser matrices mean more uniform firing across classes, we aim to select features with denser matrices. We take the top 0.1 most dense scores across thresholds and take the union of the resulting features.</p></li>
+      </ul>
+      <p>Below are the indices of our final set of 24 features:</p>
+      <pre><code>features = [1064, 2420, 2642, 5167, 6847, 7636, 8709, 9028,
+    10216, 13978, 16979,19030, 20359, 21971, 24248, 25461, 25989,
+    29216, 29390, 31041, 40471,43948, 44551, 47241]</code></pre>
+      <p>We recognize that the sparse autoencoder almost certainly encodes more than 24 semantic features, and that some extracted features may not be semantic at all. Nonetheless, we restrict our analysis to this set for clarity and to enable deeper examination in the next section.</p>
+
+      <h1 id="analysis">Analysis</h1>
+      <p>Now that we have identified the most salient features in the activation space, we aim to examine the adversarial effects on them. To do this, we collected 25 images from each class in the test dataset, and evaluate their clean activations and features against their perturbed ones.</p>
+      <p>In general, we find that the perturbations of <span class="math inline">\(h_{adv}\)</span> are random and do not encode any meaning, so we omit analysis in a few sections to save word/figure count. Visualizations of <span class="math inline">\(h_{adv}\)</span> can be found in the code.</p>
+
+      <h2 id="principal-component-analysis">Principal Component Analysis</h2>
+      <p>We perform PCA on clean activations to obtain a 2D projection and visualize adversarial drift. This provides a fixed set of axes capturing the natural geometry and dominant semantic directions of the model’s feature space. Projecting adversarial activations onto these same axes, we can directly observe whether adversarial perturbations push representations into new linear combinations of these semantic directions.</p>
+      <p>Thus, adversarial points deviating from clean projections along these axes is direct evidence that adversarial features arise from new superposed combinations of latent directions.</p>
+      <p>Conversely, low correlation between adversarial attacks and superposition would imply that adversarial and clean activations occupy the same manifold in PCA space; no new directions of variance appear.</p>
+
+      <h3 id="results-1">Results</h3>
+      <figure>
+        <img src="./media/98da1317389f5e0408f1a9dcc01aae553c38b857.png" id="fig:pca" alt="Clean and adversarial PCA projections." />
+        <figcaption>Clean and adversarially perturbed (wrt. input) token projections onto PCA axes calculated from the clean activations only. PC1 and PC2 vectors can be found in the appendix.</figcaption>
+      </figure>
+      <p>We find that the PCA visualizations are consistent with our predictions overall; the clean and perturbed tokens largely overlap, but the perturbed ones show a clear affine shift.</p>
+
+      <h3 id="class-centroid-drift">Class Centroid Drift</h3>
+      <p>To visualize perturbation effects on classes relative to each other, we evaluate the centroid drift per class in PCA.</p>
+      <figure>
+        <img src="./media/4247f8a32cc6b7cf07ba540714460a83b443417e.png" id="fig:centroid" alt="Class centroid drift in PCA space." />
+        <figcaption>Visualization of drifts per class by centroid in PCA linear space.</figcaption>
+      </figure>
+      <p>We observe a drift pattern similar to <span class="citation" data-cites="stevinson2025adversarialsuperposition">(Stevinson et al. 2025)</span>: perturbations pull most class centroids toward the global center, increasing superposition and weakening class separation.</p>
+
+      <h2 id="umap">UMAP</h2>
+      <p>We further examine the effect of perturbations on inter-class relationships to gain insight into nonlinear warping in the activation manifold, which PCA cannot fully reveal as it captures only linear variance. By embedding clean and adversarial activations into a shared UMAP space, we can assess whether perturbations push representations off the clean manifold, blur class boundaries, or distort the topology of the space. If superposition contributes to adversarial vulnerability, we expect perturbed activations to exhibit reduced class separation and drift toward neighboring class regions.</p>
+
+      <h3 id="results-2">Results</h3>
+      <p>We evaluate two representations of individual images: the CLS token and the mean of <span class="math inline">\(7 \times 7\)</span> patch tokens.</p>
+      <p>
+        <img src="./media/866b456ee0f4486bc157212b0a0cb7048f340355.png" title="fig:" id="fig:umap-both-1" alt="UMAP visualizations for CLS token and mean-pooled embeddings." />
+        <img src="./media/2ffbc07dbdea43541bb0e8e070f15af218bfc20e.png" title="fig:" id="fig:umap-both-2" alt="UMAP visualizations for CLS token and mean-pooled embeddings." />
+      </p>
+      <p>As noted, the perturbed tokens wrt. <span class="math inline">\(h\)</span> are almost completely random and remain close to their original activations.</p>
+      <p>For the perturbed tokens wrt. input, the UMAP visualization generally support our prediction but with a few nuances. In the CLS-token view, the adversarial points collapse the class structure even more aggressively than expected: instead of drifting toward the center of the clean manifold, the perturbed tokens form a tight cluster away from the clean points along several distinct directions. This indicates a stronger form of manifold warping where perturbations push the CLS representation into alternative attractor regions rather than merely blurring existing class boundaries, as with the mean pooled tokens. However, the effect on the mean-pooled tokens is still strong, with perturbations drawing entire class clusters into others, as illustrated by the cyan and orange points migrating across the grid.</p>
+      <p>Additionally, we find that the CLS token is more adversarially vulnerable: this makes sense, as it serves as the model’s global aggregation vector and directly feeds the classifier head. As a result, even small changes in the input to propagate disproportionately into its representation.</p>
+      <p>From a superposition perspective, the CLS token is the semantic bottleneck of the model and thus integrating information from all tokens makes it especially vulnerable to perturbations that push it into mixed or unstable feature directions arising from superposition.</p>
+
+      <h2 id="mean-drift-heatmap">Drift Heatmap</h2>
+      <p> Drift heatmaps provides a feature-level view of how activations change under perturbations, showing which features are most sensitive and which inputs are most unstable. This reveals drift patterns and feature-specific vulnerabilities that PCA and UMAP do not capture.</p>
+      <p>Our prediction for this visualization is more ambiguous as the heatmap should not show strong, blocky patterns per feature (which would indicate perturbations along feature directions rather than superposed combinations of them) nor random noise (which would indicate no correlation between features and perturbations).</p>
+      <p>We instead expect drift to be distributed across many features rather than concentrated in a small subset, consistent with the hypothesis that adversarial perturbations operate through shared subspaces. In this case, the heatmap should exhibit faint but coherent vertical patterns—signatures of correlated feature drift typically associated with superposition. Overall, we predict a low-rank, softly structured drift pattern reflective of distributed vulnerability.</p>
+
+      <h3 id="results-3">Results</h3>
+      <p>We once again evaluate image representation over both the CLS token and the mean of the patch tokens.</p>
+      <p>
+        <img src="./media/c35116b717100eb6cf5d1f14717fc009413ab039.png" id="fig:drift1" alt="Drift heatmap placeholder." />
+      </p>
+      <figure>
+        <img src="./media/e6035a79d743fd58cb2752d3352ccccce5d0f819.png" id="fig:drift2" alt="Drift heatmap for CLS and mean tokens." />
+        <figcaption>Drift heatmap for CLS and mean tokens, by feature (x-axis) and image index (y-axis) (a little messy, but the images should be sorted by class label).</figcaption>
+      </figure>
+      <p>The CLS drift heatmap shows diffuse but correlated feature shifts, consistent with adversarial perturbations acting through superposed feature directions rather than single-feature failures. The structure is neither random nor sharply blocky, matching the expected low-rank drift signature of superposition. The mean drift heatmap is a little noisier but shares a similar pattern.</p>
+
+      <h1 id="conclusion">Conclusion</h1>
+      <p>In this work, we investigated whether adversarial perturbations exploit the superposed feature directions recovered by sparse autoencoders in naturally trained models. While prior work demonstrated this connection in controlled, artificially bottlenecked settings, our goal was to test whether similar mechanisms arise in real activation spaces without synthetic architectural constraints.</p>
+      <p>Across linear manifold analyses (PCA), we observed that adversarial perturbations induce a good amount of drift in activation space but do not fully collapse class structure or generate large new variance directions. Nonlinear UMAP visualizations showed greater class overlap and topological distortion under perturbation, suggesting that adversarial effects may manifest more strongly along nonlinear manifold directions.</p>
+      <p>The drift heatmaps revealed distributed but low-rank shifts across features—patterns consistent with mild superposition. Overall, these findings suggest that adversarial perturbations do interact with superposed directions.</p>
+      <p>This study has several limitations: we focused on a single model layer, employed one SAE configuration, and evaluated a limited set of perturbations. Broader testing across architectures, layers, and attack families would help clarify the generality of the observed patterns. Additionally, the vision model used here employs a coarse 7×7 patching scheme, meaning each token corresponds to a large region of the input image. This limits how precisely we can interpret token-level activation patterns, and higher-resolution models may yield cleaner and more granular structure.</p>
+      <p>While not definitive, our results provide evidence that superposition may contribute to adversarial vulnerability in naturally trained networks, and they highlight sparse autoencoders as a useful tool for probing internal failure modes.</p>
+      <p>Future work could also explore the contrapositive direction: whether reducing superposition via adversarial training leads to more robust and interpretable representations.</p>
+
+      <h1 id="appendix">Appendix</h1>
+
+      <h2 id="appendix-a-feature-frequency-visualizations">Appendix A: Feature frequency visualizations</h2>
+      <p>Note the logarithmic scale.</p>
+      <figure>
+        <img src="./media/f68e73d29d54858cd702758e06a3d842b9afb132.png" id="fig:appendix1" alt="Ranks 100-104" />
+        <figcaption>Ranks 100-104</figcaption>
+      </figure>
+      <figure>
+        <img src="./media/534cee5eec1aa716a4136da6e4742e2fc6530325.png" id="fig:appendix2" alt="Ranks 165-169" />
+        <figcaption>Ranks 165-169</figcaption>
+      </figure>
+      <figure>
+        <img src="./media/ed98afdc4eaba8238e8fc1d3358deb7c31206f79.png" id="fig:appendix3" alt="Ranks 185-189" />
+        <figcaption>Ranks 185-189</figcaption>
+      </figure>
+
+      <h2 id="appendix-b-pca-details">Appendix B: PCA details</h2>
+      <p>Math: Let <span class="math inline">\(H \in \mathbb{R}^{n \times d}\)</span> denote the matrix of clean SAE activations, where each row <span class="math inline">\(h_i \in \mathbb{R}^{d}\)</span> corresponds to a token-level hidden representation. We first compute the mean activation <span class="math display">\[\mu = \frac{1}{n} \sum_{i=1}^{n} h_i,\]</span> and center the data, <span class="math display">\[\tilde{H} = H - \mathbf{1}\mu^{\top},\]</span> where <span class="math inline">\(\mathbf{1} \in \mathbb{R}^{n}\)</span> is the all-ones vector. The empirical covariance matrix is then <span class="math display">\[C = \frac{1}{n}\, \tilde{H}^{\top} \tilde{H}.\]</span></p>
+      <p>PCA solves the eigenvalue problem <span class="math display">\[C v_k = \lambda_k v_k,\]</span> yielding orthonormal principal directions <span class="math inline">\(v_1, \dots, v_d\)</span> with eigenvalues <span class="math inline">\(\lambda_1 \ge \lambda_2 \ge \cdots \ge \lambda_d\)</span>. Let <span class="math inline">\(V = [v_1 \; v_2] \in \mathbb{R}^{d \times 2}\)</span> denote the top two principal components. Clean activations are projected into this semantic basis via <span class="math display">\[Z_{\text{clean}} = \tilde{H} V.\]</span></p>
+      <p>To evaluate adversarial effects in the same PCA coordinate system, let <span class="math inline">\(H_{\text{adv}} \in \mathbb{R}^{n \times d}\)</span> denote the corresponding matrix of adversarial activations. We center them using the clean mean, <span class="math display">\[\tilde{H}_{\text{adv}} = H_{\text{adv}} - \mathbf{1}\mu^{\top},\]</span> and project using the same PCA directions, <span class="math display">\[Z_{\text{adv}} = \tilde{H}_{\text{adv}} V.\]</span></p>
+      <p>Comparing <span class="math inline">\(Z_{\text{clean}}\)</span> and <span class="math inline">\(Z_{\text{adv}}\)</span> reveals whether adversarial perturbations preserve the clean representation geometry or drive activations into new directions outside the clean semantic manifold.</p>
+      <p><strong>Resulting PC1, PC2 vectors</strong>:</p>
+      <pre><code>PC1: [ 0.4088726   0.01576076 -0.09443528 -0.15735169  0.13589688 -0.16522
+ -0.01098652 -0.40202352 -0.19093314 -0.21308999  0.18218072 -0.09359304
+ -0.32223454 -0.03792915 -0.1597165   0.01251047  0.15485823 -0.3362623
+ -0.06265952 -0.12845783 -0.08792782 -0.28028604 -0.12788834 -0.27660093]</code></pre>
+      <pre><code>PC2: [ 0.20037031  0.02032769  0.05324512  0.36427462  0.12103343 -0.12917484
+ -0.00411543  0.20308389 -0.12150586 -0.26046842  0.06457995  0.37817797
+  0.21793342  0.42652634  0.33324564 -0.04308495  0.13319795 -0.15295534
+ -0.12122921  0.10722329 -0.17674664  0.13323678  0.03056798 -0.24885897]</code></pre>
+
+      <!-- References section from Pandoc -->
+      <div id="refs" class="references hanging-indent" role="doc-bibliography">
+        <h1>References</h1>
+        <div id="ref-athalye2018obfuscated">
+          <p>Athalye, Anish, Nicholas Carlini, and David Wagner. 2018. “Obfuscated Gradients Give a False Sense of Security.” In <em>ICML</em>.</p>
+        </div>
+        <div id="ref-carlini2017towards">
+          <p>Carlini, Nicholas, and David Wagner. 2017. “Towards Evaluating the Robustness of Neural Networks.” <em>IEEE Symposium on Security and Privacy</em>.</p>
+        </div>
+        <div id="ref-cunningham2023sparseautoencodershighlyinterpretable">
+          <p>Cunningham, Hoagy, Aidan Ewart, Logan Riggs, Robert Huben, and Lee Sharkey. 2023. “Sparse Autoencoders Find Highly Interpretable Features in Language Models.” <a href="https://arxiv.org/abs/2309.08600">https://arxiv.org/abs/2309.08600</a>.</p>
+        </div>
+        <div id="ref-elhage2022superposition">
+          <p>Elhage, Nelson, Tristan Hume, Catherine Olsson, Nicholas Schiefer, Tom Henighan, Shauna Kravec, Zac Hatfield-Dodds, et al. 2022. “Toy Models of Superposition.” <em>Transformer Circuits Thread</em>.</p>
+        </div>
+        <div id="ref-ilyas2019adversarialexamplesbugsfeatures">
+          <p>Ilyas, Andrew, Shibani Santurkar, Dimitris Tsipras, Logan Engstrom, Brandon Tran, and Aleksander Madry. 2019. “Adversarial Examples Are Not Bugs, They Are Features.” <a href="https://arxiv.org/abs/1905.02175">https://arxiv.org/abs/1905.02175</a>.</p>
+        </div>
+        <div id="ref-khoury2018geometryadversarialexamples">
+          <p>Khoury, Marc, and Dylan Hadfield-Menell. 2018. “On the Geometry of Adversarial Examples.” <a href="https://arxiv.org/abs/1811.00525">https://arxiv.org/abs/1811.00525</a>.</p>
+        </div>
+        <div id="ref-madry2018towards">
+          <p>Madry, Aleksander, Aleksandar Makelov, Ludwig Schmidt, Dimitris Tsipras, and Adrian Vladu. 2018. “Towards Deep Learning Models Resistant to Adversarial Attacks.” <em>ICLR</em>.</p>
+        </div>
+        <div id="ref-raghunathan2018certified">
+          <p>Raghunathan, Aditi, Jacob Steinhardt, and Percy Liang. 2018. “Certified Defenses Against Adversarial Examples.” In <em>ICLR</em>.</p>
+        </div>
+        <div id="ref-stevinson2025adversarialsuperposition">
+          <p>Stevinson, Edward, Lucas Prieto, Melih Barsbey, and Tolga Birdal. 2025. “Adversarial Attacks Leverage Interference Between Features in Superposition.”</p>
+        </div>
+        <div id="ref-tramer2018ensemble">
+          <p>Tramèr, Florian, Alexey Kurakin, Nicolas Papernot, Ian Goodfellow, Dan Boneh, and Patrick McDaniel. 2018. “Ensemble Adversarial Training: Attacks and Defenses.” In <em>ICLR</em>.</p>
+        </div>
+      </div>
+
+      <!-- Footnotes -->
+      <section class="footnotes" role="doc-endnotes">
+        <hr />
+        <ol>
+          <li id="fn1" role="doc-endnote"><p>The CLS token is a special embedding added to the beginning of the input sequence that the model uses as a global summary representation for downstream classification.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+          <li id="fn2" role="doc-endnote"><p>Layer normalization ensures the SAE is invariant to activation scale, preventing it from encoding norm differences and encouraging it to learn features based on directional structure rather than magnitude.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+          <li id="fn3" role="doc-endnote"><p>Further details about calculations in this section can be found in the code.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+          <li id="fn4" role="doc-endnote"><p>More detailed graphs of feature frequency over these ranges can be found in the Appendix.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+          <li id="fn5" role="doc-endnote"><p>Thresholds 1.0 and 3.0 are mostly noise and thus dropped.<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+        </ol>
+      </section>
+
+    </div>
+
+    <!-- Right margin: you can leave empty or add a global note -->
+    <div class="margin-right-block">
+      <!-- Optional: global margin notes or acknowledgements -->
+    </div>
+
+  </div>
+
+</body>
+</html>
